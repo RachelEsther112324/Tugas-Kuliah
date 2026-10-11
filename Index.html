@@ -1,0 +1,242 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Aplikasi Identifikasi Palet Warna</title>
+
+    <!-- Library untuk mendeteksi warna -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f1f5f9;
+            margin: 0;
+            padding: 30px 15px;
+            text-align: center;
+            color: #1e293b;
+        }
+
+        .container {
+            max-width: 850px;
+            margin: auto;
+            padding: 25px;
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        h1 {
+            color: #2563eb;
+        }
+
+        input {
+            margin: 15px 0;
+            max-width: 100%;
+        }
+
+        #preview {
+            display: block;
+            max-width: 100%;
+            max-height: 350px;
+            margin: 20px auto;
+            border-radius: 8px;
+        }
+
+        #status {
+            color: #475569;
+        }
+
+        #palette {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .color-card {
+            width: 145px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            overflow: hidden;
+            background-color: white;
+        }
+
+        .swatch {
+            height: 100px;
+        }
+
+        .color-info {
+            padding: 12px 5px;
+        }
+
+        .hex {
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .rgb {
+            font-size: 13px;
+            color: #475569;
+        }
+
+        .note {
+            font-size: 13px;
+            color: #64748b;
+            margin-top: 25px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>Aplikasi Identifikasi Palet Warna</h1>
+
+        <p>
+            Pilih gambar untuk mendeteksi enam warna dominan.
+        </p>
+
+        <!-- Input untuk memilih gambar -->
+        <input
+            type="file"
+            id="imageInput"
+            accept="image/*"
+        >
+
+        <p id="status">Belum ada gambar yang dipilih.</p>
+
+        <!-- Pratinjau gambar -->
+        <img id="preview" alt="Pratinjau gambar" hidden>
+
+        <h2>Hasil Palet Warna</h2>
+
+        <!-- Hasil deteksi warna akan ditampilkan di sini -->
+        <div id="palette">
+            Palet warna akan muncul di sini.
+        </div>
+
+        <p class="note">
+            RGB menggunakan nilai 0–255, sedangkan HEX menggunakan
+            kode heksadesimal.
+        </p>
+    </div>
+
+    <script>
+        const imageInput = document.getElementById("imageInput");
+        const preview = document.getElementById("preview");
+        const palette = document.getElementById("palette");
+        const status = document.getElementById("status");
+
+        // Saat pengguna memilih gambar
+        imageInput.addEventListener("change", function () {
+            const file = this.files[0];
+
+            if (!file) {
+                return;
+            }
+
+            // Pastikan file yang dipilih adalah gambar
+            if (!file.type.startsWith("image/")) {
+                status.textContent = "Silakan pilih file gambar.";
+                return;
+            }
+
+            palette.innerHTML = "";
+            status.textContent = "Sedang mendeteksi warna...";
+
+            const imageURL = URL.createObjectURL(file);
+
+            // Proses setelah gambar berhasil dimuat
+            preview.onload = function () {
+                preview.hidden = false;
+
+                try {
+                    if (typeof ColorThief === "undefined") {
+                        throw new Error(
+                            "Library Color Thief gagal dimuat. Periksa koneksi internet."
+                        );
+                    }
+
+                    const colorThief = new ColorThief();
+
+                    // Mengambil enam warna dominan
+                    const colors = colorThief.getPalette(preview, 6);
+
+                    palette.innerHTML = "";
+
+                    colors.forEach(function (color) {
+                        const r = color[0];
+                        const g = color[1];
+                        const b = color[2];
+
+                        // Mengubah RGB menjadi HEX
+                        const hex = "#" + color
+                            .map(function (value) {
+                                return value
+                                    .toString(16)
+                                    .padStart(2, "0");
+                            })
+                            .join("")
+                            .toUpperCase();
+
+                        // Membuat kartu warna
+                        const card = document.createElement("div");
+                        card.className = "color-card";
+
+                        // Kotak tampilan warna
+                        const swatch = document.createElement("div");
+                        swatch.className = "swatch";
+                        swatch.style.backgroundColor = hex;
+
+                        // Informasi HEX dan RGB
+                        const info = document.createElement("div");
+                        info.className = "color-info";
+
+                        const hexText = document.createElement("div");
+                        hexText.className = "hex";
+                        hexText.textContent = hex;
+
+                        const rgbText = document.createElement("div");
+                        rgbText.className = "rgb";
+                        rgbText.textContent =
+                            "RGB(" + r + ", " + g + ", " + b + ")";
+
+                        // Memasukkan informasi ke kartu
+                        info.appendChild(hexText);
+                        info.appendChild(rgbText);
+
+                        card.appendChild(swatch);
+                        card.appendChild(info);
+
+                        palette.appendChild(card);
+                    });
+
+                    status.textContent =
+                        "Berhasil mendeteksi " + colors.length +
+                        " warna dominan!";
+
+                } catch (error) {
+                    status.textContent = "Gagal: " + error.message;
+                    console.error(error);
+                } finally {
+                    URL.revokeObjectURL(imageURL);
+                }
+            };
+
+            // Jika gambar tidak dapat dibuka
+            preview.onerror = function () {
+                status.textContent = "Gambar gagal dibuka.";
+                URL.revokeObjectURL(imageURL);
+            };
+
+            preview.src = imageURL;
+        });
+    </script>
+
+</body>
+</html>
